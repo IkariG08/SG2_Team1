@@ -16,6 +16,11 @@ The simulation models a factory with six workstations that produce electronic de
 
 ---
 
+## **IMPORTANT: READ BEFORE RUNNING THE CODE**
+The simulation has a method in which simulates an accident at the fabric that has a 0.01% chance of happening, which stops production and the code itself. When that happens, this version of the code prints in which product did the accident take place in console. Nevertheless, it comes with some errors due to the way the interrupt method is used. Don't worry. Don't alarm. The code works properly. If you ran it and had an accident... You're pretty lucky! Most probably if you run it again you won't have the same outcome. But the code does indeed **run and work**.
+
+---
+
 ## **Code Structure**
 The code is organized into the following components:
 
