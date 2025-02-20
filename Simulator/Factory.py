@@ -148,7 +148,7 @@ class Factory:
         """Trigger a facility-stopping accident with 0.01% daily probability."""
         while True:
             yield self.env.timeout(10)
-            if random.random() < 0.001: #0.01% chance of an accident happening with each product
+            if random.random() < 0.0001: #0.01% chance of an accident happening with each product
                 print(f"Accident at {self.env.now} - Production halted!")
                 self.production_process.interrupt()
                 break
