@@ -1,0 +1,141 @@
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.3s ease;
+}
+
+.navbar {
+  margin-bottom: 20px;
+}
+
+/* Chart Area Styling */
+#chart-area {
+  margin: 20px auto;
+  max-width: 900px;
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: absolute;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Bar chart styling */
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: darkorange;
+}
+
+/* Chart title styling */
+.chart-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #chart-area {
+    max-width: 100%;
+  }
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: white;
+}
+
+body.dark-mode svg {
+  background-color: #1e1e1e;
+}
+
+/* Axis and Labels Styling */
+.axis-label {
+  font-family: 'Segoe UI', sans-serif;
+  fill: #333;
+  transition: fill 0.3s ease;
+}
+
+body.dark-mode .axis-label {
+  fill: white;
+}
+
+/* Axis and Tick Styling */
+.axis path,
+.axis line {
+  stroke: #333;
+  transition: stroke 0.3s ease;
+}
+
+body.dark-mode .axis path,
+body.dark-mode .axis line {
+  stroke: white;
+}
+
+.axis text {
+  fill: #333;
+  transition: fill 0.3s ease;
+}
+
+body.dark-mode .axis text {
+  fill: white;
+}
+
+/* Button Styling */
+button#dark-mode-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  font-size: 24px;
+  text-align: center;
+  line-height: 50px;
+  background-color: #343a40;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button#dark-mode-btn:hover {
+  background-color: #495057;
+}
+
+/* Range Button Styling */
+.btn-outline-primary {
+  color: #495057;
+  background-color: #f8f9fa;
+  border-color: #495057;
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .btn-outline-primary {
+  color: #f8f9fa;
+  background-color: #495057;
+  border-color: #f8f9fa;
+}
+
+.btn-outline-primary:hover {
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+body.dark-mode .btn-outline-primary:hover {
+  color: #1e1e1e;
+  background-color: #007bff;
+  border-color: #007bff;
+}
