@@ -47,6 +47,14 @@ body {
   transition: fill 0.3s ease;
 }
 
+/* Add specific styles for percentage labels */
+.percentage-label {
+  font-size: 12px;
+  font-weight: bold;
+  fill: #333;
+  transition: fill 0.3s ease;
+}
+
 /* =============================================
   4. LEGEND
 ============================================= */
@@ -69,23 +77,26 @@ body.dark-mode .chart-container {
   box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
+/* Dark mode text colors */
 body.dark-mode .axis-label,
-body.dark-mode .legend text {
-  fill: white;
+body.dark-mode .legend text,
+body.dark-mode .axis text,
+body.dark-mode .percentage-label,
+body.dark-mode .faulty-label {
+  fill: #ffffff !important;
+  fill: #e15759;
 }
+
 
 body.dark-mode .axis path,
 body.dark-mode .axis line {
-  stroke: white;
-}
-
-body.dark-mode .axis text {
-  fill: white;
+  stroke: #ffffff;
 }
 
 body.dark-mode svg {
   background-color: #2d2d2d;
 }
+
 
 /* =============================================
   6. BUTTONS AND CONTROLS
