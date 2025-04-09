@@ -1,86 +1,45 @@
+/* =============================================
+  1. BASE STYLES
+============================================= */
 body {
   font-family: 'Roboto', sans-serif;
   background-color: #f8f9fa;
   margin: 0;
-  padding: 0;
+  padding: 20px;
   transition: background-color 0.3s ease;
 }
 
-.navbar {
-  margin-bottom: 20px;
+/* =============================================
+  2. CHART CONTAINERS
+============================================= */
+.chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+  transition: all 0.3s ease;
 }
 
-/* Chart Area Styling */
 #chart-area {
-  margin: 20px auto;
   max-width: 900px;
+  margin: 0 auto;
+  position: relative;
 }
 
-/* Tooltip styling */
-.tooltip {
-  position: absolute;
-  text-align: center;
-  padding: 5px;
-  font-size: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  border-radius: 4px;
-  pointer-events: none;
-}
-
-/* Bar chart styling */
-.bar {
-  fill: steelblue;
-}
-
-.bar:hover {
-  fill: darkorange;
-}
-
-/* Chart title styling */
-.chart-title {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  #chart-area {
-    max-width: 100%;
-  }
-}
-
-/* Dark Mode Styles */
-body.dark-mode {
-  background-color: #1e1e1e;
-  color: white;
-}
-
-body.dark-mode svg {
-  background-color: #1e1e1e;
-}
-
-/* Axis and Labels Styling */
+/* =============================================
+  3. AXIS AND LABELS
+============================================= */
 .axis-label {
   font-family: 'Segoe UI', sans-serif;
   fill: #333;
   transition: fill 0.3s ease;
 }
 
-body.dark-mode .axis-label {
-  fill: white;
-}
-
-/* Axis and Tick Styling */
 .axis path,
 .axis line {
   stroke: #333;
   transition: stroke 0.3s ease;
-}
-
-body.dark-mode .axis path,
-body.dark-mode .axis line {
-  stroke: white;
 }
 
 .axis text {
@@ -88,11 +47,49 @@ body.dark-mode .axis line {
   transition: fill 0.3s ease;
 }
 
+/* =============================================
+  4. LEGEND
+============================================= */
+.legend text {
+  font-size: 12px;
+  fill: #333;
+  transition: fill 0.3s ease;
+}
+
+/* =============================================
+  5. DARK MODE STYLES
+============================================= */
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: white;
+}
+
+body.dark-mode .chart-container {
+  background-color: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .axis-label,
+body.dark-mode .legend text {
+  fill: white;
+}
+
+body.dark-mode .axis path,
+body.dark-mode .axis line {
+  stroke: white;
+}
+
 body.dark-mode .axis text {
   fill: white;
 }
 
-/* Button Styling */
+body.dark-mode svg {
+  background-color: #2d2d2d;
+}
+
+/* =============================================
+  6. BUTTONS AND CONTROLS
+============================================= */
 button#dark-mode-btn {
   position: fixed;
   bottom: 20px;
@@ -114,7 +111,6 @@ button#dark-mode-btn:hover {
   background-color: #495057;
 }
 
-/* Range Button Styling */
 .btn-outline-primary {
   color: #495057;
   background-color: #f8f9fa;
@@ -138,4 +134,17 @@ body.dark-mode .btn-outline-primary:hover {
   color: #1e1e1e;
   background-color: #007bff;
   border-color: #007bff;
+}
+
+/* =============================================
+  7. RESPONSIVE ADJUSTMENTS
+============================================= */
+@media (max-width: 768px) {
+  #chart-area {
+    max-width: 100%;
+  }
+  
+  .chart-container {
+    padding: 10px;
+  }
 }

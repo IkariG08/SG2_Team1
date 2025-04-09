@@ -1,7 +1,12 @@
 import random
 import simpy
 import csv
+import os
 from dataclasses import dataclass
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CSV_FILENAME = os.path.join(BASE_DIR, "data", "simulation_data.csv")
 
 # ------------------------------
 # Dataclasses for storing statistics
@@ -155,7 +160,7 @@ class Factory:
 # ------------------------------
 NUM_RUNS = 365  # One run = One day of production
 SIM_TIME = 5000  # Simulation time (in time units)
-CSV_FILENAME = "simulation_data.csv"
+
 
 # Define CSV field names:
 fieldnames = [

@@ -1,36 +1,44 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Set up dimensions and margins
+  // =============================================
+  // 1. CONSTANTS AND SETUP
+  // =============================================
   const margin = { top: 60, right: 60, bottom: 60, left: 60 };
   const width = 800 - margin.left - margin.right;
   const height = 500 - margin.top - margin.bottom;
+  let currentRange = "daily";
 
-  // Create SVG container
+  // =============================================
+  // 2. MAIN CHART - PRODUCTION OVER TIME
+  // =============================================
   const svgContainer = d3.select("#chart-area")
     .style("position", "relative");
 
-  const svg = svgContainer.append("svg")
+  // Create container for production chart
+  const productionContainer = svgContainer.append("div")
+    .attr("class", "chart-container")
+    .style("margin-bottom", "30px");
+
+  const svg = productionContainer.append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom);
 
-  // Create chart group
   const chart = svg.append("g")
     .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-  // Add title
-  const title = chart.append("text")
+  // Production chart title
+  chart.append("text")
     .attr("x", width / 2)
     .attr("y", -20)
     .attr("text-anchor", "middle")
     .style("font-family", "'Segoe UI', sans-serif")
     .style("font-size", "24px")
     .style("fill", "#007bff")
-    .text("Dashboard for Manufacturing Facility");
+    .text("Completed Products Over Time");
 
-  // Set up scales
+  // Scales and axes for production chart
   const x = d3.scaleLinear().range([0, width]);
   const y = d3.scaleLinear().range([height, 0]);
 
-  // Create axis groups with 'axis' class for styling
   const xAxisGroup = chart.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0, ${height})`);
@@ -38,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const yAxisGroup = chart.append("g")
     .attr("class", "axis");
 
-  // Add axis labels
+  // Axis labels
   chart.append("text")
     .attr("class", "axis-label")
     .attr("x", width / 2)
@@ -54,16 +62,35 @@ document.addEventListener("DOMContentLoaded", function () {
     .attr("text-anchor", "middle")
     .text("Total products");
 
-  let currentRange = "daily";
+  // =============================================
+  // 3. OCCUPANCY PER WORKSTATION CHART (Bar Chart)
+  // =============================================
+  const occupancyContainer = svgContainer.append("div")
+    .attr("class", "chart-container");
 
-  // Load and process data
+  const occupancySvg = occupancyContainer.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const occupancyChart = occupancySvg.append("g")
+    .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+  // =============================================
+  // 4. DATA LOADING AND PROCESSING
+  // =============================================
   d3.csv("data/simulation_data.csv").then(function (data) {
+    // Process data for both charts
     data.forEach(d => {
       d.run = +d.Run;
       d.total_products = isNaN(+d.TotalCompleted) ? null : +d.TotalCompleted;
+      for (let i = 0; i < 6; i++) {
+        d[`ws${i}_occupancy`] = +d[`WS${i}_Occupancy`];
+      }
     });
 
-    // Data aggregation function
+    // =============================================
+    // 5. CHART UPDATE FUNCTIONS
+    // =============================================
     function aggregateData(range) {
       if (range === "daily") return data;
 
@@ -72,13 +99,22 @@ document.addEventListener("DOMContentLoaded", function () {
       for (let i = 0; i < data.length; i += groupSize) {
         const group = data.slice(i, i + groupSize);
         const avgProducts = d3.mean(group, d => d.total_products);
-        grouped.push({ run: i / groupSize + 1, total_products: avgProducts });
+        const avgOccupancy = {};
+
+        for (let j = 0; j < 6; j++) {
+          avgOccupancy[`ws${j}_occupancy`] = d3.mean(group, d => d[`ws${j}_occupancy`]);
+        }
+
+        grouped.push({
+          run: i / groupSize + 1,
+          total_products: avgProducts,
+          ...avgOccupancy
+        });
       }
       return grouped;
     }
 
-    // Update chart function
-    function update(filteredData, range) {
+    function updateProductionChart(filteredData, range) {
       const xDomain = range === "daily" ? [1, 365] : d3.extent(filteredData, d => d.run);
       x.domain(xDomain);
       y.domain([1120, 1200]);
@@ -110,16 +146,78 @@ document.addEventListener("DOMContentLoaded", function () {
         .attr("stroke-width", 2);
     }
 
-    // Redraw function
-    function redraw(range) {
-      const newData = aggregateData(range);
-      update(newData, range);
+    function updateOccupancyChart(data) {
+      occupancyChart.selectAll("*").remove();
+
+      occupancyChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Occupancy per Workstation");
+
+      const avgOccupancies = [];
+      for (let i = 0; i < 6; i++) {
+        const mean = d3.mean(data.filter(d => !isNaN(d[`ws${i}_occupancy`])), d => d[`ws${i}_occupancy`]);
+        avgOccupancies.push({ workstation: `WS${i}`, occupancy: mean });
+      }
+
+      const xBar = d3.scaleBand()
+        .domain(avgOccupancies.map(d => d.workstation))
+        .range([0, width])
+        .padding(0.2);
+
+      const yBar = d3.scaleLinear()
+        .domain([40, 100])
+        .range([height, 0]);
+
+      occupancyChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(xBar));
+
+      occupancyChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(yBar));
+
+      occupancyChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 40)
+        .attr("text-anchor", "middle")
+        .text("Workstations");
+
+      occupancyChart.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .text("Occupancy (%)");
+
+      occupancyChart.selectAll(".bar")
+        .data(avgOccupancies)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => xBar(d.workstation))
+        .attr("width", xBar.bandwidth())
+        .attr("y", d => yBar(d.occupancy))
+        .attr("height", d => height - yBar(d.occupancy))
+        .attr("fill", "#007bff");
     }
 
-    // Initial draw
-    redraw(currentRange);
+    function redraw(range) {
+      const newData = aggregateData(range);
+      updateProductionChart(newData, range);
+      updateOccupancyChart(data); // Static bar chart, not aggregated
+    }
 
-    // Create range selector buttons
+    // =============================================
+    // 6. CONTROLS AND INTERACTIONS
+    // =============================================
     const buttonGroup = svgContainer.append("div")
       .style("position", "absolute")
       .style("top", "20px")
@@ -135,7 +233,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Create dark mode toggle button
+    // =============================================
+    // 7. DARK MODE TOGGLE
+    // =============================================
     const darkModeBtn = d3.select("body")
       .append("button")
       .attr("id", "dark-mode-btn")
@@ -154,14 +254,16 @@ document.addEventListener("DOMContentLoaded", function () {
       .style("cursor", "pointer")
       .text("🌙");
 
-    // Dark mode toggle handler
     darkModeBtn.on("click", () => {
       const isDark = d3.select("body").classed("dark-mode");
       d3.select("body").classed("dark-mode", !isDark);
       darkModeBtn.text(isDark ? "🌙" : "☀️");
-      
-      // Redraw to update axis colors
       redraw(currentRange);
     });
+
+    // =============================================
+    // 8. INITIAL RENDER
+    // =============================================
+    redraw(currentRange);
   });
 });
