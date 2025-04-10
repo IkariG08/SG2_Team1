@@ -10,8 +10,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // =============================================
   // 2. MAIN CHART - PRODUCTION OVER TIME
   // =============================================
-  const svgContainer = d3.select("#chart-area")
-    .style("position", "relative");
+  const svgContainer = d3.select("body").append("div")
+    .attr("class", "dashboard");
 
   // Create container for production chart
   const productionContainer = svgContainer.append("div")
@@ -103,8 +103,38 @@ document.addEventListener("DOMContentLoaded", function () {
   const rejectionChart = rejectionSvg.append("g")
     .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+
   // =============================================
-  // 6. DATA LOADING AND PROCESSING
+  // 6. DOWNTIME PER WORKSTATION CHART
+  // =============================================
+  const downtimeContainer = svgContainer.append("div")
+  .attr("class", "chart-container")
+  .style("margin-bottom", "30px");
+
+  const downtimeSvg = downtimeContainer.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom);
+
+  const downtimeChart = downtimeSvg.append("g")
+  .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+  // =============================================
+  // 7. COMPARISON CHART - COMPLETED VS REJECTED
+  // =============================================
+  const comparisonContainer = svgContainer.append("div")
+  .attr("class", "chart-container")
+  .style("margin-bottom", "30px");
+
+  const comparisonSvg = comparisonContainer.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom);
+
+  const comparisonChart = comparisonSvg.append("g")
+  .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+
+  // =============================================
+  // 8. DATA LOADING AND PROCESSING
   // =============================================
   d3.csv("data/simulation_data.csv").then(function (data) {
     // Process data for all charts
@@ -120,35 +150,323 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 7. CHART UPDATE FUNCTIONS
+    // 9. CHART UPDATE FUNCTIONS
     // =============================================
     function aggregateData(range) {
       if (range === "daily") return data;
-
+    
       const groupSize = range === "weekly" ? 7 : 30;
       const grouped = [];
       for (let i = 0; i < data.length; i += groupSize) {
         const group = data.slice(i, i + groupSize);
         const avgProducts = d3.mean(group, d => d.total_products);
-        const sumRejected = d3.sum(group, d => d.total_rejected);
-        const avgFaultyRate = d3.mean(group, d => d.faulty_rate);
         const avgOccupancy = {};
-
+    
         for (let j = 0; j < 6; j++) {
           avgOccupancy[`ws${j}_occupancy`] = d3.mean(group, d => d[`ws${j}_occupancy`]);
         }
-
+    
         grouped.push({
           run: i / groupSize + 1,
           total_products: avgProducts,
-          total_rejected: sumRejected,
-          faulty_rate: avgFaultyRate,
           ...avgOccupancy
         });
       }
       return grouped;
     }
 
+    function initializeRejectionChart() {
+      // Use only daily data (first 365 days)
+      const dailyData = data.filter(d => d.run <= 365 && d.total_rejected !== "accident");
+      
+      // Create 25-unit intervals
+      const intervalSize = 25;
+      const intervals = [];
+      for (let i = 25; i <= 365; i += intervalSize) {
+        intervals.push({
+          start: i - intervalSize + 1,
+          end: i,
+          run: i
+        });
+      }
+    
+      const intervalData = intervals.map(interval => {
+        const dataInRange = dailyData.filter(d => 
+          d.run >= interval.start && d.run <= interval.end
+        );
+        
+        return {
+          run: interval.run,
+          total_rejected: d3.sum(dataInRange, d => d.total_rejected),
+          faulty_rate: d3.mean(dataInRange, d => d.faulty_rate),
+          count: dataInRange.length
+        };
+      }).filter(d => d.count > 0);
+    
+      // Create scales
+      const x = d3.scaleBand()
+        .domain(intervalData.map(d => d.run))
+        .range([0, width])
+        .padding(0.2);
+    
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(intervalData, d => d.total_rejected) * 1.1])
+        .range([height, 0]);
+    
+      // Add chart title
+      rejectionChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Daily Product Rejects");
+    
+      // Add bars
+      rejectionChart.selectAll(".reject-bar")
+        .data(intervalData)
+        .enter()
+        .append("rect")
+        .attr("class", "reject-bar")
+        .attr("x", d => x(d.run))
+        .attr("width", x.bandwidth())
+        .attr("y", d => y(d.total_rejected))
+        .attr("height", d => height - y(d.total_rejected))
+        .attr("fill", "#e15759")
+        .attr("rx", 3);
+    
+      // Add percentage labels
+      rejectionChart.selectAll(".percentage-label")
+        .data(intervalData)
+        .enter()
+        .append("text")
+        .attr("class", "percentage-label")
+        .attr("x", d => x(d.run) + x.bandwidth()/2)
+        .attr("y", d => y(d.total_rejected) - 8)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .style("font-weight", "bold")
+        .style("fill", "#333")
+        .text(d => `${d.faulty_rate.toFixed(1)}%`);
+    
+      // Add x-axis
+      rejectionChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x).tickFormat(d => d));
+    
+      // Add y-axis
+      rejectionChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(y));
+    
+      // Add axis labels
+      rejectionChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 35)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Production Day Interval (25 days)");
+    
+      rejectionChart.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -40)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Number of Rejects");
+    }
+
+    function initializeComparisonChart() {
+      comparisonChart.selectAll("*").remove();
+    
+      const filteredData = data.filter(d => d.total_products !== null && d.total_rejected !== "accident");
+    
+      // Ejes
+      const x0 = d3.scaleBand()
+        .domain(filteredData.map(d => d.run))
+        .range([0, width])
+        .padding(0.2);
+    
+      const x1 = d3.scaleBand()
+        .domain(["Completed", "Rejected"])
+        .range([0, x0.bandwidth()])
+        .padding(0.05);
+    
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(filteredData, d => d.total_products) * 1.1])
+        .range([height, 0]);
+    
+      // Ejes
+      comparisonChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x0).tickValues(x0.domain().filter(d => d % 30 === 0)).tickFormat(d3.format("d")));
+    
+      comparisonChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(y));
+    
+      // Título
+      comparisonChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Completed vs Rejected Products");
+    
+      // Etiquetas
+      comparisonChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 35)
+        .attr("text-anchor", "middle")
+        .text("Day");
+    
+      comparisonChart.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .text("Number of Products");
+    
+      // Colores por categoría
+      const color = d3.scaleOrdinal()
+        .domain(["Completed", "Rejected"])
+        .range(["steelblue", "#e15759"]);
+    
+      // Estructurar los datos para agrupado
+      const groupedData = filteredData.map(d => ({
+        run: d.run,
+        values: [
+          { key: "Completed", value: d.total_products },
+          { key: "Rejected", value: d.total_rejected }
+        ]
+      }));
+    
+      // Dibujar las barras
+      comparisonChart.selectAll(".group")
+        .data(groupedData)
+        .enter()
+        .append("g")
+        .attr("class", "group")
+        .attr("transform", d => `translate(${x0(d.run)}, 0)`)
+        .selectAll("rect")
+        .data(d => d.values)
+        .enter()
+        .append("rect")
+        .attr("x", d => x1(d.key))
+        .attr("y", d => y(d.value))
+        .attr("width", x1.bandwidth())
+        .attr("height", d => height - y(d.value))
+        .attr("fill", d => color(d.key))
+        .attr("rx", 2);
+    
+      // Leyenda
+      const legend = comparisonChart.append("g")
+        .attr("transform", `translate(${width - 160}, 10)`);
+    
+      legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", "steelblue");
+    
+      legend.append("text")
+        .attr("x", 18)
+        .attr("y", 10)
+        .attr("alignment-baseline", "middle")
+        .style("font-size", "12px")
+        .text("Completed");
+    
+      legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 20)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", "#e15759");
+    
+      legend.append("text")
+        .attr("x", 18)
+        .attr("y", 30)
+        .attr("alignment-baseline", "middle")
+        .style("font-size", "12px")
+        .text("Rejected");
+    }
+    
+    
+
+    function updateDowntimeChart(data) {
+      downtimeChart.selectAll("*").remove();
+    
+      downtimeChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Average Downtime per Workstation");
+    
+      const avgDowntimes = [];
+      for (let i = 0; i < 6; i++) {
+        const mean = d3.mean(data.filter(d => !isNaN(d[`ws${i}_downtime`])), d => d[`ws${i}_downtime`]);
+        avgDowntimes.push({ workstation: `WS${i}`, downtime: mean });
+      }
+    
+      const xBar = d3.scaleBand()
+        .domain(avgDowntimes.map(d => d.workstation))
+        .range([0, width])
+        .padding(0.2);
+    
+      const yBar = d3.scaleLinear()
+        .domain([0, d3.max(avgDowntimes, d => d.downtime)])
+        .range([height, 0]);
+    
+      downtimeChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(xBar));
+    
+      downtimeChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(yBar));
+    
+      downtimeChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 40)
+        .attr("text-anchor", "middle")
+        .text("Workstations");
+    
+      downtimeChart.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .text("Downtime (units)");
+    
+      downtimeChart.selectAll(".bar")
+        .data(avgDowntimes)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => xBar(d.workstation))
+        .attr("width", xBar.bandwidth())
+        .attr("y", d => yBar(d.downtime))
+        .attr("height", d => height - yBar(d.downtime))
+        .attr("fill", "#ffc107");
+    }
+    
+    
     function updateProductionChart(filteredData, range) {
       const xDomain = range === "daily" ? [1, 365] : d3.extent(filteredData, d => d.run);
       x.domain(xDomain);
@@ -312,134 +630,23 @@ document.addEventListener("DOMContentLoaded", function () {
         .attr("fill", "#28a745");
     }
 
-    function updateRejectionChart(filteredData, range) {
-      rejectionChart.selectAll("*").remove();
-    
-      // First filter out any invalid/accident data
-      const validData = filteredData.filter(d => d.total_rejected !== "accident");
-    
-      // Create 25-unit intervals
-      const intervalSize = 25;
-      const minRun = d3.min(validData, d => d.run);
-      const maxRun = d3.max(validData, d => d.run);
-      
-      // Generate all possible 25-unit intervals
-      const intervals = [];
-      for (let i = 25; i <= maxRun + intervalSize; i += intervalSize) {
-        if (i >= minRun) {
-          intervals.push({
-            start: i - intervalSize + 1,
-            end: i,
-            run: i // Use the end point as the label
-          });
-        }
-      }
-    
-      // Aggregate data into intervals
-      const intervalData = intervals.map(interval => {
-        const dataInRange = validData.filter(d => 
-          d.run >= interval.start && d.run <= interval.end
-        );
-        
-        return {
-          run: interval.run,
-          total_rejected: d3.sum(dataInRange, d => d.total_rejected),
-          faulty_rate: d3.mean(dataInRange, d => d.faulty_rate),
-          count: dataInRange.length
-        };
-      }).filter(d => d.count > 0); // Only show intervals with data
-    
-      // Create scales
-      const x = d3.scaleBand()
-        .domain(intervalData.map(d => d.run))
-        .range([0, width])
-        .padding(0.2);
-    
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(intervalData, d => d.total_rejected) * 1.1])
-        .range([height, 0]);
-    
-      // Add chart title
-      rejectionChart.append("text")
-        .attr("x", width / 2)
-        .attr("y", -10)
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .style("font-weight", "bold")
-        .text("Production Rejects");
-    
-      // Add bars
-      rejectionChart.selectAll(".reject-bar")
-        .data(intervalData)
-        .enter()
-        .append("rect")
-        .attr("class", "reject-bar")
-        .attr("x", d => x(d.run))
-        .attr("width", x.bandwidth())
-        .attr("y", d => y(d.total_rejected))
-        .attr("height", d => height - y(d.total_rejected))
-        .attr("fill", "#e15759")
-        .attr("rx", 3);
-    
-      // Add percentage labels
-      rejectionChart.selectAll(".percentage-label")
-        .data(intervalData)
-        .enter()
-        .append("text")
-        .attr("class", "percentage-label")
-        .attr("x", d => x(d.run) + x.bandwidth()/2)
-        .attr("y", d => y(d.total_rejected) - 8)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .style("font-weight", "bold")
-        .style("fill", "#333")
-        .text(d => `${d.faulty_rate.toFixed(1)}%`);
-    
-      // Add x-axis
-      rejectionChart.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x).tickFormat(d => d));
-    
-      // Add y-axis
-      rejectionChart.append("g")
-        .attr("class", "axis")
-        .call(d3.axisLeft(y));
-    
-      // Add axis labels
-      rejectionChart.append("text")
-        .attr("class", "axis-label")
-        .attr("x", width / 2)
-        .attr("y", height + 35)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Production Run Interval (25 units)");
-    
-      rejectionChart.append("text")
-        .attr("class", "axis-label")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height / 2)
-        .attr("y", -40)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Number of Rejects");
-    }
-
     function redraw(range) {
       const newData = aggregateData(range);
       updateProductionChart(newData, range);
       updateOccupancyChart(data);
       updateProdTimeChart(data);
-      updateRejectionChart(newData);
+      updateDowntimeChart(data);
+
+      
     }
 
     // =============================================
-    // 8. CONTROLS AND INTERACTIONS
+    // 10. CONTROLS AND INTERACTIONS
     // =============================================
     const buttonGroup = svgContainer.append("div")
       .style("position", "absolute")
-      .style("top", "20px")
-      .style("right", "110px");
+      .style("top", "14%")
+      .style("left", "32%");
 
     ["daily", "weekly", "monthly"].forEach(label => {
       buttonGroup.append("button")
@@ -452,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 9. DARK MODE TOGGLE
+    // 11. DARK MODE TOGGLE
     // =============================================
     const darkModeBtn = d3.select("body")
       .append("button")
@@ -480,8 +687,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 10. INITIAL RENDER
+    // 12. INITIAL RENDER
     // =============================================
     redraw(currentRange);
+    initializeRejectionChart();
+    initializeComparisonChart();
   });
 });
