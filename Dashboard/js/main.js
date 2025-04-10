@@ -489,7 +489,6 @@ document.addEventListener("DOMContentLoaded", function () {
         .text("Efficiency (%)");
     }
     
-
     function updateEfficiencyChart(data) {
       efficiencyChart.selectAll("*").remove();
     
@@ -584,7 +583,6 @@ document.addEventListener("DOMContentLoaded", function () {
         .style("font-size", "12px")
         .text(d => d.efficiency ? `${(d.efficiency * 100).toFixed(1)}%` : "");
     }
-    
 
     function updateDowntimeChart(data) {
       downtimeChart.selectAll("*").remove();
@@ -648,7 +646,6 @@ document.addEventListener("DOMContentLoaded", function () {
         .attr("height", d => height - yBar(d.downtime))
         .attr("fill", "#ffc107");
     }
-    
     
     function updateProductionChart(filteredData, range) {
       const xDomain = range === "daily" ? [1, 365] : d3.extent(filteredData, d => d.run);
@@ -897,6 +894,104 @@ document.addEventListener("DOMContentLoaded", function () {
         .text("Show KPIs")
         .on("click", () => overlay.style("display", "flex"));
     }
+
+    const exportBtn = d3.select("body")
+  .append("button")
+  .attr("id", "export-btn")
+  .text("Export as PNG")
+  .on("click", () => {
+    const target = document.querySelector(".dashboard");
+    const isDarkMode = d3.select("body").classed("dark-mode");
+    
+    // Temporarily force styles for export
+    const originalStyles = {
+      textColor: d3.selectAll(".axis text, .axis-label, .chart-title").style("fill", "#000000"),
+      backgroundColor: d3.select(".dashboard").style("background-color")
+    };
+    
+    // Apply export-optimized styles
+    if (isDarkMode) {
+      d3.selectAll(".axis text, .axis-label, .chart-title").style("fill", "#ffffff");
+      d3.select(".dashboard").style("background-color", "#2d2d2d");
+    } else {
+      d3.selectAll(".axis text, .axis-label, .chart-title").style("fill", "#333333");
+      d3.select(".dashboard").style("background-color", "#ffffff");
+    }
+    
+    // Set html2canvas options
+    const options = {
+      backgroundColor: isDarkMode ? "#2d2d2d" : "#ffffff",
+      scale: 2, // Higher resolution
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      windowWidth: target.scrollWidth,
+      windowHeight: target.scrollHeight
+    };
+    
+    // Add loading indicator
+    const loading = d3.select("body")
+      .append("div")
+      .style("position", "fixed")
+      .style("top", "50%")
+      .style("left", "50%")
+      .style("transform", "translate(-50%, -50%)")
+      .style("background", "rgba(0,0,0,0.7)")
+      .style("color", "white")
+      .style("padding", "20px")
+      .style("border-radius", "5px")
+      .style("z-index", "9999")
+      .text("Generating image...");
+    
+    html2canvas(target, options).then(canvas => {
+      // Restore original styles
+      d3.selectAll(".axis text, .axis-label, .chart-title").style("fill", originalStyles.textColor);
+      d3.select(".dashboard").style("background-color", originalStyles.backgroundColor);
+      
+      loading.remove();
+      
+      // Create download link
+      const link = document.createElement("a");
+      link.download = `dashboard_${new Date().toISOString().slice(0,10)}.png`;
+      link.href = canvas.toDataURL("image/png", 1.0);
+      link.click();
+      
+      // Show success message
+      const success = d3.select("body")
+        .append("div")
+        .style("position", "fixed")
+        .style("top", "20px")
+        .style("left", "50%")
+        .style("transform", "translateX(-50%)")
+        .style("background", "#28a745")
+        .style("color", "white")
+        .style("padding", "10px 20px")
+        .style("border-radius", "5px")
+        .style("z-index", "9999")
+        .text("Image downloaded successfully!");
+      
+      setTimeout(() => success.remove(), 3000);
+    }).catch(err => {
+      console.error("Export failed:", err);
+      loading.text("Export failed - see console");
+      setTimeout(() => loading.remove(), 3000);
+    });
+  });
+
+  // Button styling
+  d3.select("#export-btn")
+    .style("position", "fixed")
+    .style("top", "20px")
+    .style("right", "250px")
+    .style("padding", "8px 12px")
+    .style("background-color", "#007bff")
+    .style("color", "#fff")
+    .style("border", "none")
+    .style("border-radius", "4px")
+    .style("cursor", "pointer")
+    .style("font-size", "14px")
+    .style("z-index", "1000");
+
 
 
     // =============================================

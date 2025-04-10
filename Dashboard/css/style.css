@@ -386,3 +386,12 @@ body.dark-mode #show-kpis-btn {
   }
 }
 
+.kpi-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
