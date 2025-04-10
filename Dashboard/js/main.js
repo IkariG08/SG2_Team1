@@ -641,6 +641,78 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // =============================================
+    // 11. KPI PANEL CREATION
+    // =============================================
+    function renderKPIModal(data) {
+      // Calculations
+      const totalDays = data.length;
+      const totalCompleted = d3.sum(data, d => d.total_products);
+      const totalRejected = d3.sum(data, d => d.total_rejected);
+      const avgDailyProduction = totalCompleted / totalDays;
+      const rejectionRate = (totalRejected / (totalCompleted + totalRejected)) * 100;
+    
+      let maxDowntime = 0;
+      let worstStation = "";
+      for (let i = 0; i < 6; i++) {
+        const avg = d3.mean(data, d => d[`ws${i}_downtime`]);
+        if (avg > maxDowntime) {
+          maxDowntime = avg;
+          worstStation = `WS${i}`;
+        }
+      }
+    
+      const efficiency = (totalCompleted / (totalDays * 1200)) * 100;
+    
+      // Create overlay
+      const overlay = d3.select("body")
+        .append("div")
+        .attr("id", "kpi-overlay")
+        .style("display", "none");
+    
+      // Create modal container (centered)
+      const modal = overlay.append("div")
+        .attr("class", "kpi-modal");
+    
+      // Add close button (inside modal)
+      modal.append("div")
+        .attr("class", "kpi-close")
+        .html("&times;")
+        .on("click", () => overlay.style("display", "none"));
+    
+      // Add title (centered)
+      modal.append("h3")
+        .attr("class", "kpi-title")
+        .text("Production KPIs");
+    
+      // Create KPI container (centered within modal)
+      const kpiContainer = modal.append("div")
+        .attr("class", "kpi-container");
+    
+      const kpis = [
+        { title: "📦 Avg Daily Output", value: `${avgDailyProduction.toFixed(2)} units` },
+        { title: "❌ Rejection Rate", value: `${rejectionRate.toFixed(2)}%` },
+        { title: "🛠️ Most Downtime", value: worstStation },
+        { title: "⚙️ Efficiency", value: `${efficiency.toFixed(2)}%` }
+      ];
+    
+      // Add KPI boxes
+      kpiContainer.selectAll("div.kpi-box")
+        .data(kpis)
+        .enter()
+        .append("div")
+        .attr("class", "kpi-box")
+        .html(d => `<h4>${d.title}</h4><p>${d.value}</p>`);
+    
+      // Show KPI button
+      d3.select("body")
+        .append("button")
+        .attr("id", "show-kpis-btn")
+        .text("Show KPIs")
+        .on("click", () => overlay.style("display", "flex"));
+    }
+
+
+    // =============================================
     // 10. CONTROLS AND INTERACTIONS
     // =============================================
     const buttonGroup = svgContainer.append("div")
@@ -690,6 +762,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // 12. INITIAL RENDER
     // =============================================
     redraw(currentRange);
+    renderKPIModal(data);
     initializeRejectionChart();
     initializeComparisonChart();
   });
