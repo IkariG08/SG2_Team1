@@ -132,9 +132,38 @@ document.addEventListener("DOMContentLoaded", function () {
   const comparisonChart = comparisonSvg.append("g")
   .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+  // =============================================
+  // 8. EFFICIENCY OVER TIME CHART
+  // =============================================
+  const efficiencyContainer = svgContainer.append("div")
+  .attr("class", "chart-container fade-in")
+  .style("margin-bottom", "30px");
+
+  const efficiencySvg = efficiencyContainer.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom);
+
+  const efficiencyChart = efficiencySvg.append("g")
+  .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
   // =============================================
-  // 8. DATA LOADING AND PROCESSING
+  // 9. OVERALL EFFICIENCY PER WORKSTATION (HORIZONTAL BAR CHART)
+  // =============================================
+  const efficiencyBarContainer = svgContainer.append("div")
+  .attr("class", "chart-container");
+
+  const efficiencyBarSvg = efficiencyBarContainer.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom);
+
+  const efficiencyBarChart = efficiencyBarSvg.append("g")
+  .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+
+
+
+  // =============================================
+  // 10. DATA LOADING AND PROCESSING
   // =============================================
   d3.csv("data/simulation_data.csv").then(function (data) {
     // Process data for all charts
@@ -150,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 9. CHART UPDATE FUNCTIONS
+    // 11. CHART UPDATE FUNCTIONS
     // =============================================
     function aggregateData(range) {
       if (range === "daily") return data;
@@ -400,7 +429,161 @@ document.addEventListener("DOMContentLoaded", function () {
         .style("font-size", "12px")
         .text("Rejected");
     }
+
+    function updateEfficiencyPerWorkstationChart(data) {
+      efficiencyBarChart.selectAll("*").remove();
     
+      efficiencyBarChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Overall Efficiency per Workstation");
+    
+      const efficiencyBarData = [];
+    
+      for (let i = 0; i < 6; i++) {
+        const busyTime = d3.sum(data, d => (d[`ws${i}_occupancy`] / 100) * 5000);
+        const downTime = d3.sum(data, d => d[`ws${i}_downtime`]);
+        const eff = busyTime + downTime > 0 ? busyTime / (busyTime + downTime) : 0;
+        efficiencyBarData.push({ workstation: `WS${i}`, efficiency: eff });
+      }
+    
+      const xBarEff = d3.scaleLinear()
+        .domain([0.9, 1])
+        .range([0, width]);
+    
+      const yBarEff = d3.scaleBand()
+        .domain(efficiencyBarData.map(d => d.workstation))
+        .range([0, height])
+        .padding(0.2);
+    
+      efficiencyBarChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(yBarEff));
+    
+      efficiencyBarChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(xBarEff).tickFormat(d3.format(".0%")));
+    
+      efficiencyBarChart.selectAll(".bar")
+        .data(efficiencyBarData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("y", d => yBarEff(d.workstation))
+        .attr("height", yBarEff.bandwidth())
+        .attr("x", 0)
+        .attr("width", d => xBarEff(d.efficiency))
+        .attr("fill", "#F89880");
+    
+      efficiencyBarChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 35)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Efficiency (%)");
+    }
+    
+
+    function updateEfficiencyChart(data) {
+      efficiencyChart.selectAll("*").remove();
+    
+      // Chart Title
+      efficiencyChart.append("text")
+        .attr("x", width / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .style("font-family", "'Segoe UI', sans-serif")
+        .style("font-size", "24px")
+        .style("fill", "#007bff")
+        .text("Monthly Efficiency");
+    
+      // Group into 12 months (approx. every 30 days)
+      const months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+    
+      const grouped = [];
+      for (let i = 0; i < 12; i++) {
+        const start = i * 30;
+        const group = data.slice(start, start + 30);
+        const completed = d3.sum(group, d => d.total_products ?? 0);
+        const rejected = d3.sum(group, d => d.total_rejected ?? 0);
+        const efficiency = (completed + rejected) > 0 ? completed / (completed + rejected) : null;
+        grouped.push({ month: months[i], efficiency });
+      }
+    
+      // Scales - Modified y-axis domain
+      const x = d3.scaleBand()
+        .domain(months)
+        .range([0, width])
+        .padding(0.2);
+    
+      // Set y-axis from 0.94 to 0.96 (94% to 96%)
+      const y = d3.scaleLinear()
+        .domain([0.94, 0.96])  // Changed from [0.9, 1]
+        .range([height, 0]);
+    
+      // Axes
+      efficiencyChart.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x));
+    
+      // Custom y-axis with 0.2% (0.002) intervals
+      efficiencyChart.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(y)
+          .tickValues(d3.range(0.94, 0.9601, 0.002))  // 94% to 96% in 0.2% steps
+          .tickFormat(d3.format(".1%")));  // Format as percentage with 1 decimal
+    
+      // Axis Labels
+      efficiencyChart.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 40)
+        .attr("text-anchor", "middle")
+        .text("Month");
+    
+      efficiencyChart.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .text("Efficiency");
+    
+      // Bars
+      efficiencyChart.selectAll(".bar")
+        .data(grouped)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => x(d.month))
+        .attr("y", d => y(d.efficiency))
+        .attr("width", x.bandwidth())
+        .attr("height", d => height - y(d.efficiency))
+        .attr("fill", "#800080")
+        .attr("rx", 3);
+    
+      // Percentage Labels
+      efficiencyChart.selectAll(".eff-label")
+        .data(grouped)
+        .enter()
+        .append("text")
+        .attr("class", "eff-label")
+        .attr("x", d => x(d.month) + x.bandwidth() / 2)
+        .attr("y", d => y(d.efficiency) - 8)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text(d => d.efficiency ? `${(d.efficiency * 100).toFixed(1)}%` : "");
+    }
     
 
     function updateDowntimeChart(data) {
@@ -636,12 +819,16 @@ document.addEventListener("DOMContentLoaded", function () {
       updateOccupancyChart(data);
       updateProdTimeChart(data);
       updateDowntimeChart(data);
+      updateEfficiencyChart(data);
+      updateEfficiencyPerWorkstationChart(data);
+
+
 
       
     }
 
     // =============================================
-    // 11. KPI PANEL CREATION
+    // 12. KPI PANEL CREATION
     // =============================================
     function renderKPIModal(data) {
       // Calculations
@@ -713,7 +900,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =============================================
-    // 10. CONTROLS AND INTERACTIONS
+    // 13. CONTROLS AND INTERACTIONS
     // =============================================
     const buttonGroup = svgContainer.append("div")
       .style("position", "absolute")
@@ -731,7 +918,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 11. DARK MODE TOGGLE
+    // 14. DARK MODE TOGGLE
     // =============================================
     const darkModeBtn = d3.select("body")
       .append("button")
@@ -759,7 +946,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // =============================================
-    // 12. INITIAL RENDER
+    // 15. INITIAL RENDER
     // =============================================
     redraw(currentRange);
     renderKPIModal(data);
