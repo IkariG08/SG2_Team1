@@ -38,7 +38,7 @@ The dashboard is being continuously upgraded with new visualizations, including:
    python factory.py
 This will create `simulation_data.csv` in the `data/` folder. Right now the folder is empty so that way your generated data is unique and exclusive to you!
    
-2. To view the dashboard, start a local web server:
+2. To view the dashboard, right click on the dashboard folder and open an integrated terminal to start a local web server:
    ```bash
    python -m http.server
 
