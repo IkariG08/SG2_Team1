@@ -36,7 +36,7 @@ The dashboard is being continuously upgraded with new visualizations, including:
 1. First, run the factory simulation to generate data (or click the play button at the top right of the code)
    ```bash
    python factory.py
-This will create `simulation_data.csv` in the `data/` folder. Right now the folder is empty so that way your generated data is unique and exclusive to you!
+This will create `simulation_data.csv` in a new folder called `data/`, that way your generated data is unique and exclusive to you!
    
 2. To view the dashboard, right click on the dashboard folder and open an integrated terminal to start a local web server:
    ```bash
