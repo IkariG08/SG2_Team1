@@ -6,7 +6,12 @@ from dataclasses import dataclass
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-CSV_FILENAME = os.path.join(BASE_DIR, "data", "simulation_data.csv")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+CSV_FILENAME = os.path.join(DATA_DIR, "simulation_data.csv")
+
+# Create 'data' folder if it doesn't exist
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
 
 # ------------------------------
 # Dataclasses for storing statistics
